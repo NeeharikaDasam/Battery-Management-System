@@ -1,0 +1,88 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+#define CURRENT_SENSOR A4
+
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Change 0x27 to 0x3F if needed
+
+void setup() {
+    Serial.begin(9600);
+    lcd.init();       // Initialize LCD
+    lcd.backlight();  // Turn on backlight
+    lcd.setCursor(0, 0);
+    lcd.print("Voltage Monitor"); // Intro message
+    Serial.println("Voltage Monitor");
+    delay(2000);
+    lcd.clear();
+
+    dht.begin();      // Initialize DHT11
+}
+
+void loop() {
+    float scaleFactor = 1.93;  // Adjust this factor based on readings
+
+    float Cell_1 = analogRead(A0) * (5.0 / 1023.0) * scaleFactor;
+    float Cell_2 = analogRead(A1) * (5.0 / 1023.0) * scaleFactor;
+    float Cell_3 = analogRead(A2) * (5.0 / 1023.0) * scaleFactor;
+    float Cell_4 = analogRead(A3) * (5.0 / 1023.0) * scaleFactor;
+
+    float Total_Voltage = Cell_1 + Cell_2 + Cell_3 + Cell_4;
+    float Pack_Voltage = analogRead(A3) * (5.0 / 1023.0) * 4.002 * scaleFactor;
+
+    // 🖥 Display on Serial Monitor
+    Serial.print("C1: "); Serial.print(Cell_1, 2);
+    Serial.print("  C2: "); Serial.print(Cell_2, 2);
+    Serial.print("  C3: "); Serial.print(Cell_3, 2);
+    Serial.print("  C4: "); Serial.println(Cell_4, 2);
+
+    Serial.print("Total Voltage: "); Serial.print(Total_Voltage, 2);
+    Serial.print("  Pack Voltage: "); Serial.println(Pack_Voltage, 2);
+    Serial.println("--------------------------------");
+
+    // 📺 Display on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("C1:"); lcd.print(Cell_1, 2);
+    lcd.print(" C2:"); lcd.print(Cell_2, 2);
+    lcd.setCursor(0, 1);
+    lcd.print("C3:"); lcd.print(Cell_3, 2);
+    lcd.print(" C4:"); lcd.print(Cell_4, 2);
+    delay(3000);
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Total:"); lcd.print(Total_Voltage, 2);
+    lcd.setCursor(0, 1);
+    lcd.print("Pack:"); lcd.print(Pack_Voltage, 2);
+    delay(3000);
+
+    // 🌡️ Read DHT11 values
+    float temp = dht.readTemperature();
+    float hum = dht.readHumidity();
+
+    // ⚡ Read Current Sensor (ACS712)
+    float currentRaw = analogRead(CURRENT_SENSOR);
+    float voltage = (currentRaw / 1023.0) * 5.0;
+    float current = (voltage - 2.5) / 0.185;
+
+    // Display on Serial
+    Serial.print("Temp: "); Serial.print(temp); Serial.print(" C  ");
+    Serial.print("Humidity: "); Serial.print(hum); Serial.print(" %  ");
+    Serial.print("Current: "); Serial.print(current); Serial.println(" A");
+
+    // Display on LCD
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("T:"); lcd.print(temp, 1);
+    lcd.print("C H:"); lcd.print(hum, 0);
+    lcd.print("%");
+    lcd.setCursor(0, 1);
+    lcd.print("I:"); lcd.print(current, 2);
+    lcd.print("A");
+    delay(3000);
+}
